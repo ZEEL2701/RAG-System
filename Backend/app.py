@@ -10,7 +10,6 @@ from .document_processor import DocumentProcessor
 from .vector_store import SessionVectorStore
 from .llm_manager import LLMManager
 from langchain_core.documents import Document
-from .web_search import fetch_web_snippets
 
 logger = logging.getLogger("enhanced_rag")
 
@@ -121,7 +120,7 @@ class SessionBasedRAG:
             return self.s3_manager.download_file(file_info["object_key"], destination_path)
         return False
 
-    def query(self, question: str, model_name: Optional[str] = None, strategy: str = "vector" , include_web: bool = False) -> Dict[str, Any]:
+    def query(self, question: str, model_name: Optional[str] = None, strategy: str = "vector") -> Dict[str, Any]:
         try:
             logger.info(f"Query using strategy: {strategy}")
 
@@ -154,9 +153,6 @@ class SessionBasedRAG:
                 relevant_docs = relevant_docs[:self.config.max_context_documents]
             else:
                 return {"preview": [], "answer": f"Unknown search type '{strategy}'", "sources": []}
-            if include_web:
-                web_docs = fetch_web_snippets(question, k=3)
-                relevant_docs.extend(web_docs)
 
             preview = []
             seen_sources = set()
@@ -173,7 +169,7 @@ class SessionBasedRAG:
 
             answer = self.llm_manager.generate_response(question, relevant_docs, model_name=model_name)
             sources = [{"url": p["url"], "filename": p["filename"], "file_type": p["file_type"]} for p in preview]
-            summary = f"_Answer based on {len(preview)} sources{' including web results' if include_web else ''}._"
+            summary = f"_Answer based on {len(preview)} sources._"
 
             return {
                 "preview": preview,

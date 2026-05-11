@@ -1,10 +1,27 @@
 import uuid
 import logging
+import os
 import gradio as gr
 import re
 from .app import SessionBasedRAG, get_past_files
 
 logger = logging.getLogger("enhanced_rag")
+
+
+def gradio_upload_path(file):
+    """Gradio 5+ passes FileData with .path; older versions may pass a path string or object with .name."""
+    if file is None:
+        return None
+    if isinstance(file, str) and os.path.isfile(file):
+        return file
+    if isinstance(file, dict):
+        p = file.get("path")
+        return p if isinstance(p, str) and os.path.isfile(p) else None
+    p = getattr(file, "path", None) or getattr(file, "name", None)
+    if isinstance(p, str) and os.path.isfile(p):
+        return p
+    return None
+
 
 def run_gradio_app():
     rag_instances = {}
@@ -59,7 +76,8 @@ def run_gradio_app():
         if not session_id or session_id not in rag_instances:
             rag = create_rag_instance()
             if not rag:
-                return "Failed to init system.", "", [], [], [], session_id
+                updated_choices = get_past_files()
+                return "Failed to init system.", "", [], gr.update(choices=updated_choices, value=None), session_id
             session_id = list(rag_instances.keys())[-1]
         else:
             rag = rag_instances[session_id]
@@ -72,8 +90,9 @@ def run_gradio_app():
             updated_choices = get_past_files()
             return "", answer, [], gr.update(choices=updated_choices, value=None), session_id
 
-        if file:
-            success = rag.index_document(file.name)
+        upload_path = gradio_upload_path(file)
+        if upload_path:
+            success = rag.index_document(upload_path)
             if not success:
                 updated_choices = get_past_files()
                 return "Failed to index document.", "", [], gr.update(choices=updated_choices, value=None), session_id
@@ -104,7 +123,7 @@ def run_gradio_app():
 
         if not user_query.strip():
             updated_choices = get_past_files()
-            return "Please enter a question.", "", [], [], [], session_id
+            return "Please enter a question.", "", [], gr.update(choices=updated_choices, value=None), session_id
 
         if rag.vector_store.get_session_document_count() == 0:
             updated_choices = get_past_files()
@@ -122,7 +141,11 @@ def run_gradio_app():
 
         if not relevant_docs:
             updated_choices = get_past_files()
-            return "No relevant information found.", "", [], [], [], session_id
+            return "No relevant information found.", "", [], gr.update(choices=updated_choices, value=None), session_id
+
+        max_ctx = rag.config.max_context_documents
+        if len(relevant_docs) > max_ctx:
+            relevant_docs = relevant_docs[:max_ctx]
 
         answer = rag.llm_manager.generate_response(user_query, relevant_docs, model_name=model_name)
 
@@ -147,7 +170,7 @@ def run_gradio_app():
                 file_input = gr.File(label="Upload Document", file_types=["file"], scale=1)
                 file_dropdown = gr.Dropdown(label="Previously Uploaded File", choices=[], interactive=True, allow_custom_value=True, scale=1)
                 model_selector = gr.Dropdown(
-                    choices=["llama-3.1-8b-instant", "deepseek-r1-distill-llama-70b", "gemma2-9b-it"],
+                    choices=["llama-3.1-8b-instant", "openai/gpt-oss-120b", "meta-llama/llama-4-scout-17b-16e-instruct"],
                     value="llama-3.1-8b-instant",
                     label="Language Model"
                 )
@@ -176,7 +199,11 @@ def run_gradio_app():
         get_download_button.click(download_selected_file, inputs=[file_dropdown, session_id], outputs=[download_link_output])
         delete_button.click(delete_selected_file, inputs=[file_dropdown, session_id], outputs=[delete_output])
 
-        demo.launch(server_name="127.0.0.1", server_port=7860, share=False)
+        share_public = os.getenv("GRADIO_SHARE", "true").lower() not in ("0", "false", "no")
+        logger.info(
+            f"Launching Gradio on 127.0.0.1:7860 (share={share_public}; public link prints below if enabled)"
+        )
+        demo.launch(server_name="127.0.0.1", server_port=7860, share=share_public)
 
 if __name__ == "__main__":
     import sys

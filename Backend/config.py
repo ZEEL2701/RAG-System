@@ -25,16 +25,18 @@ class Config:
         self.chunk_overlap = int(os.getenv("CHUNK_OVERLAP", "50"))
         self.collection_name = os.getenv("COLLECTION_NAME", "rag-pgvector")
 
-        self.max_tokens = int(os.getenv("MAX_TOKENS", "2048"))
+        self.max_tokens = int(os.getenv("MAX_TOKENS", "256"))
 
         # Groq API configuration
         self.groq_base_url = "https://api.groq.com"
         self.groq_api_key = os.getenv("GROQ_API_KEY", "your_groq_api_key_here")
         self.groq_model = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
+        self.groq_completion_max_tokens = int(os.getenv("GROQ_COMPLETION_MAX_TOKENS", "512"))
+        self.max_chars_per_context_doc = int(os.getenv("MAX_CHARS_PER_CONTEXT_DOC", "900"))
 
         # RAG configuration
-        self.max_context_documents = int(os.getenv("MAX_CONTEXT_DOCUMENTS", "7"))
-        self.search_k = int(os.getenv("SEARCH_K", "10"))  # Retrieve more and filter
+        self.max_context_documents = int(os.getenv("MAX_CONTEXT_DOCUMENTS", "3"))
+        self.search_k = int(os.getenv("SEARCH_K", "5"))
 
         # AWS S3 configuration
         self.s3_enabled = os.getenv("S3_ENABLED", "False").lower() == "true"

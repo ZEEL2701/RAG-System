@@ -9,7 +9,6 @@ from langchain_community.document_loaders import (
     CSVLoader,
     UnstructuredExcelLoader,
     UnstructuredWordDocumentLoader,
-    UnstructuredPowerPointLoader,
 )
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
@@ -38,7 +37,11 @@ class DocumentProcessor:
             elif ext in [".doc", ".docx"]:
                 loader = UnstructuredWordDocumentLoader(file_path)
                 docs = loader.load()
-            elif ext in [".ppt", ".pptx"]:
+            elif ext == ".pptx":
+                docs = DocumentProcessor._load_pptx_python(file_path)
+            elif ext == ".ppt":
+                from langchain_community.document_loaders import UnstructuredPowerPointLoader
+
                 loader = UnstructuredPowerPointLoader(file_path)
                 docs = loader.load()
             else:
@@ -52,6 +55,36 @@ class DocumentProcessor:
         except Exception as e:
             logger.error(f"Error loading {file_path}: {str(e)}")
             raise
+
+    @staticmethod
+    def _load_pptx_python(file_path: str) -> List[Document]:
+        """Extract text from .pptx using python-pptx (no unstructured dependency)."""
+        try:
+            from pptx import Presentation
+        except ImportError as e:
+            raise ImportError(
+                "Loading .pptx requires python-pptx. Install with: pip install python-pptx"
+            ) from e
+
+        prs = Presentation(file_path)
+        sections = []
+        for slide_idx, slide in enumerate(prs.slides, start=1):
+            texts = []
+            for shape in slide.shapes:
+                if getattr(shape, "has_text_frame", False) and shape.has_text_frame:
+                    for para in shape.text_frame.paragraphs:
+                        line = "".join(getattr(r, "text", "") or "" for r in para.runs).strip()
+                        if line:
+                            texts.append(line)
+            if texts:
+                sections.append(f"[Slide {slide_idx}]\n" + "\n".join(texts))
+        body = "\n\n".join(sections) if sections else ""
+        return [
+            Document(
+                page_content=body or "(No text extracted from slides.)",
+                metadata={"source": file_path},
+            )
+        ]
 
     @staticmethod
     def _dataframe_to_text(df: pd.DataFrame) -> str:
