@@ -182,7 +182,7 @@ def run_gradio_app():
         return "", answer, sources, past_dd_update(), session_id
 
     with gr.Blocks(css=".gr-block { font-family: 'Segoe UI', sans-serif; padding: 8px; }") as demo:
-    session_id = gr.State(None)
+        session_id = gr.State(None)
 
     gr.Markdown("### Document QA Application")
 
@@ -287,20 +287,18 @@ def run_gradio_app():
 # =========================
 
 if __name__ == "__main__":
+    import traceback
+
     try:
+        logger.info("Starting Gradio app...")
+
         server_name = "0.0.0.0"
         server_port = int(os.getenv("PORT", "7860"))
 
-        logger.info(f"Launching Gradio on {server_name}:{server_port}")
+        logger.info(f"Using port: {server_port}")
 
-        demo.launch(
-            server_name=server_name,
-            server_port=server_port,
-            share=False
-        )
+        run_gradio_app()
 
     except Exception as e:
-        logger.error(f"Failed to launch Gradio app: {e}")
-
-        import traceback
+        logger.error(f"Startup failed: {e}")
         traceback.print_exc()
