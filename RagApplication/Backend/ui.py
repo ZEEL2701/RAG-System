@@ -182,55 +182,125 @@ def run_gradio_app():
         return "", answer, sources, past_dd_update(), session_id
 
     with gr.Blocks(css=".gr-block { font-family: 'Segoe UI', sans-serif; padding: 8px; }") as demo:
-        session_id = gr.State(None)
+    session_id = gr.State(None)
 
-        gr.Markdown("### Document QA Application")
+    gr.Markdown("### Document QA Application")
 
-        with gr.Row():
-            with gr.Column(scale=1):
-                file_input = gr.File(label="Upload Document", file_types=["file"], scale=1)
-                file_dropdown = gr.Dropdown(label="Previously Uploaded File", choices=[], interactive=True, allow_custom_value=True, scale=1)
-                model_selector = gr.Dropdown(
-                    choices=["llama-3.1-8b-instant", "openai/gpt-oss-120b", "meta-llama/llama-4-scout-17b-16e-instruct"],
-                    value="llama-3.1-8b-instant",
-                    label="Language Model"
-                )
-                search_selector = gr.Dropdown(
-                    choices=["vector", "semantic", "hybrid", "LLM Only"],
-                    value="vector",
-                    label="Retrieval Strategy"
-                )
-                get_download_button = gr.Button("Download Selected File")
-                delete_button = gr.Button("Delete Selected File")
-                download_link_output = gr.Textbox(label="Download Link", interactive=False)
-                delete_output = gr.Textbox(label="Delete Status", interactive=False)
+    with gr.Row():
+        with gr.Column(scale=1):
+            file_input = gr.File(label="Upload Document", file_types=["file"], scale=1)
 
-            with gr.Column(scale=2):
-                answer_output = gr.Textbox(label="Answer", lines=15, interactive=False)
-                question_input = gr.Textbox(label="Question", placeholder="Ask a question...")
-                process_button = gr.Button("Submit")
+            file_dropdown = gr.Dropdown(
+                label="Previously Uploaded File",
+                choices=[],
+                interactive=True,
+                allow_custom_value=True,
+                scale=1
+            )
 
-            with gr.Column(scale=1):
-                sources_output = gr.JSON(label="Sources with Context")
+            model_selector = gr.Dropdown(
+                choices=[
+                    "llama-3.1-8b-instant",
+                    "openai/gpt-oss-120b",
+                    "meta-llama/llama-4-scout-17b-16e-instruct"
+                ],
+                value="llama-3.1-8b-instant",
+                label="Language Model"
+            )
 
-        demo.load(fn=get_dropdown_files, inputs=[session_id], outputs=[file_dropdown, session_id])
-        process_button.click(upload_and_query,
-                             inputs=[file_input, question_input, model_selector, search_selector, file_dropdown, session_id],
-                             outputs=[answer_output, answer_output, sources_output, file_dropdown, session_id])
-        get_download_button.click(download_selected_file, inputs=[file_dropdown, session_id], outputs=[download_link_output])
-        delete_button.click(delete_selected_file, inputs=[file_dropdown, session_id], outputs=[delete_output])
+            search_selector = gr.Dropdown(
+                choices=["vector", "semantic", "hybrid", "LLM Only"],
+                value="vector",
+                label="Retrieval Strategy"
+            )
 
-        # Render-friendly launch configuration
-        server_name = "0.0.0.0"
-        server_port = int(os.getenv("PORT", "7860"))
-        logger.info(f"Launching Gradio on {server_name}:{server_port}")
-        demo.launch(server_name=server_name, server_port=server_port)
+            get_download_button = gr.Button("Download Selected File")
+            delete_button = gr.Button("Delete Selected File")
+
+            download_link_output = gr.Textbox(
+                label="Download Link",
+                interactive=False
+            )
+
+            delete_output = gr.Textbox(
+                label="Delete Status",
+                interactive=False
+            )
+
+        with gr.Column(scale=2):
+            answer_output = gr.Textbox(
+                label="Answer",
+                lines=15,
+                interactive=False
+            )
+
+            question_input = gr.Textbox(
+                label="Question",
+                placeholder="Ask a question..."
+            )
+
+            process_button = gr.Button("Submit")
+
+        with gr.Column(scale=1):
+            sources_output = gr.JSON(label="Sources with Context")
+
+    demo.load(
+        fn=get_dropdown_files,
+        inputs=[session_id],
+        outputs=[file_dropdown, session_id]
+    )
+
+    process_button.click(
+        upload_and_query,
+        inputs=[
+            file_input,
+            question_input,
+            model_selector,
+            search_selector,
+            file_dropdown,
+            session_id
+        ],
+        outputs=[
+            answer_output,
+            answer_output,
+            sources_output,
+            file_dropdown,
+            session_id
+        ]
+    )
+
+    get_download_button.click(
+        download_selected_file,
+        inputs=[file_dropdown, session_id],
+        outputs=[download_link_output]
+    )
+
+    delete_button.click(
+        delete_selected_file,
+        inputs=[file_dropdown, session_id],
+        outputs=[delete_output]
+    )
+
+
+# =========================
+# RENDER / DEPLOYMENT ENTRY
+# =========================
 
 if __name__ == "__main__":
-    import sys
     try:
-        run_gradio_app()
+        server_name = "0.0.0.0"
+        server_port = int(os.getenv("PORT", "7860"))
+
+        logger.info(f"Launching Gradio on {server_name}:{server_port}")
+
+        demo.launch(
+            server_name=server_name,
+            server_port=server_port,
+            share=False
+        )
+
     except Exception as e:
-        print(f"Exception occurred: {e}", file=sys.stderr)
+        logger.error(f"Failed to launch Gradio app: {e}")
+
         import traceback
         traceback.print_exc()
