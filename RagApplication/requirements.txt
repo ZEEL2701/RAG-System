@@ -1,0 +1,19 @@
+# Backend + Gradio (install from repo root: pip install -r RagApplication/requirements.txt)
+gradio
+langchain
+langchain-core
+langchain-community
+langchain-text-splitters
+sentence-transformers
+transformers
+torch
+numpy
+pandas
+openpyxl
+boto3
+python-dotenv
+psycopg2-binary
+pgvector
+scikit-learn
+groq
+python-pptx>=0.6.21
