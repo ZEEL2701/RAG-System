@@ -1,2 +1,9 @@
-# Required for .pptx uploads (CNN slides, etc.)
-python-pptx>=0.6.21
+# Dependencies are listed in RagApplication/requirements.txt
+#
+# From this directory (repo root):
+#   pip install -r RagApplication/requirements.txt
+#
+# Run the app:
+#   python -m RagApplication
+#
+# See RagApplication/README.md
