@@ -1,0 +1,11 @@
+.venv
+venv
+__pycache__
+*.pyc
+.env
+.git
+uploaded_files
+.gradio
+*.pptx
+*.pdf
+System Requirements*.pdf
