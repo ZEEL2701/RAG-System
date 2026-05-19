@@ -1,0 +1,2 @@
+# Required for .pptx uploads (CNN slides, etc.)
+python-pptx>=0.6.21
